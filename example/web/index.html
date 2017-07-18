@@ -1,0 +1,24 @@
+<html>
+  <body style="background-color: black; color: white">
+
+    <script language="javascript" src="websocketclient.js"></script>
+    <script language="javascript" src="onload.js"></script>
+
+    <h1>CL-Websocket Test-Server Client</h1>
+
+    <textarea cols="80" rows="20" id="output-area" style="background-color: black; color: white"></textarea>
+    <div>
+      <button type="button" id="connect-button">Open</button>
+      <button type="button" id="close-button">Close w/ status</button>
+      <button type="button" id="close-button-no-status">Close w/o status</button>
+    </div>
+    <div>
+      <button type="button" id="send-short-message-button">Send short text message</button>
+      <button type="button" id="send-long-message-button">Send long text message</button>
+      <button type="button" id="send-binary-message-button">Send binary message (999 bytes)</button>
+    </div>
+    <div>
+      <button type="button" id="send-trigger-close-button">Let server close connection (send CLOSE text message)</button>
+    </div>
+  </body>
+</html>

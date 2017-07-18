@@ -1,0 +1,24 @@
+
+# https://github.com/crossbario/autobahn-testsuite/blob/master/doc/usage.rst
+
+cd ~/clwebsockettest/
+/Users/olli/python/wstest/bin/wstest -m fuzzingclient
+
+/Users/olli/python/wstest/bin/wstest -m massconnect
+
+
+Config:
+
+{
+   "outdir": "./reports/servers",
+   "servers": [
+       {
+	   "agent": "CL-WebSocket",
+         "url": "ws://127.0.0.1:9001"
+      }
+   ],
+   "cases": ["*"],
+   "exclude-cases": [],
+   "exclude-agent-cases": {}
+}
+
