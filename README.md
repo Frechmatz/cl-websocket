@@ -104,7 +104,7 @@ API
    Iterates over the active connection handlers belonging to a given resource. Executes the
    body with _handler_ bound to the connection handler.
    
-    * __uri-path__ The path of the resource, for example /chat
+    * __uri-path__ The path of the resource, for example /chat or nil for all resources
 
    Example:
 
