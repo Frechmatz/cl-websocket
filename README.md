@@ -39,11 +39,11 @@ Dependencies:
 Example: Echo-Service
 ---------------------
 
-Load cl-websocket
+**Load cl-websocket**
 
     (asdf:load-system "cl-websocket")
 
-Define a handler class
+**Define a handler class**
 
     (defclass echo-handler (clws.handler:connection-handler) ())
 
@@ -61,21 +61,21 @@ Define a handler class
         (v:info :echo-handler "on-binary-message")
         (clws.handler:send-binary-message handler message))
 
-Instantiate the server
+**Instantiate the server**
 
     (defparameter *server* (clws.server:make-websocketserver "localhost" 9001))
 
-Register the handler
+**Register the handler class**
 
     (clws.server:register-resource-handler *server* "/echo" 'echo-handler '())
 
-Start the server
+**Start the server**
 
     (clws.server:start *server*)
 
 The server can now be reached via ws://localhost:9001/echo
 
-Stop the server
+**Stop the server**
 
     (clws.server:stop *server*)
 
