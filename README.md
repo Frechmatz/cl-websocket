@@ -1,6 +1,6 @@
 # cl-websocket
 
-An experimental WebSocket-Server implemented in Common Lisp.
+A WebSocket-Server implemented in Common Lisp.
 
 The server passes all tests of version v0.7.5/v0.10.9 of the [autobahn testsuite](https://github.com/crossbario/autobahn-testsuite) except
 
