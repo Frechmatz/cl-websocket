@@ -45,8 +45,6 @@ Example: Echo-Service
 
 **Define a handler class**
 
-The example uses [verbose](https://github.com/Shinmera/verbose) for logging.
-
     (defclass echo-handler (clws.handler:connection-handler) ())
 
     (defmethod clws.handler:on-open-connection ((handler echo-handler))
