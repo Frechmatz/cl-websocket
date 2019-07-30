@@ -218,4 +218,11 @@ by the read function."
       (push cur-handler found-handlers))
     (assert-equal-handlers handlers found-handlers)))
 
+(defun expect-server-handlers (server handlers)
+  ""
+  (let ((found-handlers '()))
+    (clws.server::do-connection-handlers server cur-handler
+      (push cur-handler found-handlers))
+    (assert-equal-handlers handlers found-handlers)))
+
 

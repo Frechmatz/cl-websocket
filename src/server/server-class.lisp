@@ -27,16 +27,21 @@
 (defmacro do-connection-handlers-by-uri (server uri-path handler &body body)
   (let ((cons (gensym)) (con (gensym)))
     `(let ((,cons (bt:with-lock-held ((slot-value ,server 'connections-lock))
-		      (if ,uri-path
-			  (remove-if-not
-			   (lambda (cur-con)
-			     (string=
-			      ,uri-path
-			      (clws.http:get-uri-path
-			       (slot-value cur-con 'clws.server.connection::connection-http-request))))
-			   (slot-value ,server 'connections))
-			  (copy-list (slot-value ,server 'connections)))
-		      )))
+		    (remove-if-not
+		     (lambda (cur-con)
+		       (string=
+			,uri-path
+			(clws.http:get-uri-path
+			 (slot-value cur-con 'clws.server.connection::connection-http-request))))
+		     (slot-value ,server 'connections)))))
+	 (dolist (,con ,cons)
+	   (let ((,handler (slot-value ,con 'clws.connection::connection-handler)))
+	     ,@body)))))
+
+(defmacro do-connection-handlers (server handler &body body)
+  (let ((cons (gensym)) (con (gensym)))
+    `(let ((,cons (bt:with-lock-held ((slot-value ,server 'connections-lock))
+		    (copy-list (slot-value ,server 'connections)))))
 	 (dolist (,con ,cons)
 	   (let ((,handler (slot-value ,con 'clws.connection::connection-handler)))
 	     ,@body)))))

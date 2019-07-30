@@ -99,6 +99,18 @@ API
         * __:max-payload-length__ Maximum payload size of a frame
         * __:max-frame-count__ Maximum number of frames of which a message may consist
 
+* [Macro] **do-connection-handlers** (server handler &body body)
+
+   Iterates over the active connection handlers. Executes the
+   body with _handler_ bound to the connection handler.
+   
+   Example:
+
+        (defun broadcast (message)
+            (clws.server:do-connection-handlers
+                *server* cur-handler
+                (clws.handler:send-text-message cur-handler message)))
+
 * [Macro] **do-connection-handlers-by-uri** (server uri-path handler &body body)
 
    Iterates over the active connection handlers belonging to a given resource. Executes the

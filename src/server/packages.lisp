@@ -8,6 +8,7 @@
   (:export :resource-already-registered-error)
   (:export :do-connection-handlers-by-uri)
   (:export :do-connection-handlers-by-handler)
+  (:export :do-connection-handlers)
   (:export :get-uri-query-param))
 
 (defpackage :clws.server.request-processor

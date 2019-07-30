@@ -30,6 +30,7 @@
 		     (clws.server::add-connection server con)
 		     (push h handlers))
 		   (expect-server-handlers-by-uri server "/test" handlers)
+		   (expect-server-handlers server handlers)
 		   ))))
 
 
@@ -43,7 +44,7 @@
 				     :headers nil)))
 	       (let ((server (make-instance 'test-server)))
 		 (assert-true server)
-		 (let ((handlers '()))
+		 (let ((handlers '()) (all-handlers '()))
 		   (with-test-connection
 		       (:server server
 				:connection-class clws.server.connection::server-websocketconnection
@@ -52,7 +53,8 @@
 		       'silent-handler socket con h
 		     (assert-true h)
 		     (clws.server::add-connection server con)
-		     (push h handlers))
+		     (push h handlers)
+		     (push h all-handlers))
 		   (with-test-connection
 		       (:server server
 				:connection-class clws.server.connection::server-websocketconnection
@@ -60,7 +62,8 @@
 				:http-request (make-test-http-request "/test2"))
 		       'silent-handler socket con h
 		     (assert-true h)
-		     (clws.server::add-connection server con))
+		     (clws.server::add-connection server con)
+		     (push h all-handlers))
 		   (with-test-connection
 		       (:server server
 				:connection-class clws.server.connection::server-websocketconnection
@@ -70,8 +73,10 @@
 		     (assert-true h)
 		     (assert-true (typep con 'clws.server.connection::server-websocketconnection))
 		     (clws.server::add-connection server con)
-		     (push h handlers))
+		     (push h handlers)
+		     (push h all-handlers))
 		   (expect-server-handlers-by-uri server "/test" handlers)
+		   (expect-server-handlers server all-handlers)
 		   ))))
 
 (define-test test-do-connection-handlers-handler-1 ()
