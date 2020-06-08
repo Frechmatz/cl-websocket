@@ -2,45 +2,9 @@
   :serial t
   :description "cl-websocket tests"
   :long-description "cl-websocket tests"
-  :depends-on (
-	       :lisp-unit
-	       :flexi-streams
-	       :cl-base64
-	       :ironclad
-	       :bordeaux-threads
-	       :usocket
-	       :cl-threadpool
-	       :quri
-	       :verbose)
-  :components ((:module "src/http"
-			:serial t
-			:components ((:file "packages")
-				     (:file "parse-util")
-				     (:file "stream-util")
-				     (:file "http-base")
-				     (:file "http-request")
-				     (:file "http-response")
-				     (:file "header-parser")
-				     (:file "request-parser")
-				     (:file "response-serializer")))
-	       (:module "src/connection"
-			:serial t
-			:components ((:file "packages")
-				     (:file "binary-types")
-				     (:file "frame")
-				     (:file "connection-socket")
-				     (:file "connection-handler")
-				     (:file "connection")
-				     ))
-	       (:module "src/server"
-			:serial t
-			:components ((:file "packages")
-				     (:file "server-class")
-				     (:file "server-connection")
-				     (:file "connection-request-processor")
-				     (:file "server")
-				     ))
-	       (:module "test"
+  :depends-on (:cl-websocket
+	       :lisp-unit)
+  :components ((:module "test"
 			:serial t
 			:components ((:file "packages")
 				     (:file "test-handler")
@@ -75,6 +39,4 @@
 	       (:module "test/server"
 			:serial t
 			:components ((:file "register-resource-handler-test")
-				     (:file "do-connection-handlers-test")
-				     ))
-	       ))
+				     (:file "do-connection-handlers-test")))))

@@ -36,7 +36,7 @@
   (if *server*
       (format t "Test Server is already running. To stop the server enter test-server::stop")
       (progn
-	(setf *server* (clws.server:make-websocketserver "localhost" 7998 :threadpool-size 2))
+	(setf *server* (clws.server:make-websocketserver "localhost" 7998))
 	(clws.server:register-resource-handler
 	 *server*
 	 "/test"

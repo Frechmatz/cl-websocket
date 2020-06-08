@@ -1,12 +1,9 @@
 (in-package :clws.server)
 
-(defun make-websocketserver (host port &key (threadpool-size 5))
+(defun make-websocketserver (host port)
   (let ((server (make-instance 'websocketserver)))
     (setf (slot-value server 'host) host)
     (setf (slot-value server 'port) port)
-    (setf (slot-value server 'threadpool)
-	  (cl-threadpool:make-threadpool
-	   threadpool-size :name "WebsocketServer-Accept-Threadpool"))
     server))
 
 (defun add-connection (server connection)
@@ -88,7 +85,6 @@
 	   (slot-value server 'host)
 	   (slot-value server 'port)
 	   :element-type '(unsigned-byte 8)))
-    (cl-threadpool:start (slot-value server 'threadpool))
     (bt:make-thread
      (lambda ()
        (v:info :clws.server "Socket-Accept listener thread has started")
@@ -105,9 +101,18 @@
 			  (usocket:socket-close socket)
 			  (return))
 			(progn 
-			  (cl-threadpool:add-job
-			   (slot-value server 'threadpool)
-			   (clws.server.request-processor:get-processor server socket))))))
+			  ;; (cl-threadpool:add-job
+			  ;; (slot-value server 'threadpool)
+			  ;; (clws.server.request-processor:get-processor server socket))
+			  (let ((worker
+				 (clws.server.request-processor:get-processor server socket)))
+			    ;; Create a thread as preliminary workaround in order to get
+			    ;; rid of cl-threadpool dependency
+			    ;; TODO Implement accept-handler as synchronous function
+			    (bt:make-thread worker :name "Accept-Handler-Thread"))
+			    
+
+			  ))))
 	      (condition (err)
 		(progn
 		  (if socket
@@ -124,7 +129,6 @@
     ;; todo: check, if already stopping or stopped
     (setf (slot-value server 'state) :stopping)
     (v:info :clws.server "Stopping WebsocketServer...")
-    (cl-threadpool:stop (slot-value server 'threadpool) :force-destroy-timeout-seconds 10)
     (v:info :clws.server "Closing connections...")
     (let ((con-buf '()))
       (dolist (c (slot-value server 'connections))

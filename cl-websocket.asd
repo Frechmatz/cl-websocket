@@ -4,15 +4,13 @@
   :licence "Public Domain / 0-clause MIT"
   :description "Experimental Web-Socket-Server"
   :long-description "Experimental Web-Socket-Server"
-  :depends-on (
-	       :usocket
+  :depends-on (:usocket
 	       :flexi-streams
 	       :cl-base64
 	       :ironclad
 	       :bordeaux-threads
 	       :verbose
-	       :quri
-	       :cl-threadpool)
+	       :quri)
   :components ((:module "src/http"
 			:serial t
 			:components ((:file "packages")
@@ -39,5 +37,4 @@
 				     (:file "server-class")
 				     (:file "server-connection")
 				     (:file "connection-request-processor")
-				     (:file "server")))
-	       ))
+				     (:file "server")))))

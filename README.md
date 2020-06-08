@@ -32,7 +32,6 @@ Dependencies:
 * [cl-base64](http://quickdocs.org/cl-base64/)
 * [ironclad](https://github.com/froydnj/ironclad)
 * [quri](https://github.com/fukamachi/quri)
-* [cl-threadpool](https://github.com/Frechmatz/cl-threadpool)
 * [verbose](https://github.com/Shinmera/verbose)
 
 
@@ -84,7 +83,7 @@ API
 
 ### Package clws.server
 
-* **make-websocketserver** (host port &key (threadpool-size 5)) => server
+* **make-websocketserver** (host port &key) => server
 
 * **start** (server)
 

@@ -3,7 +3,6 @@
 (defclass websocketserver ()
   ((state :initform :instantiated)
    (state-lock :initform (bt:make-lock "websocketserver-state-lock"))
-   (threadpool :initform nil)
    (host :initform nil)
    (port :initform nil)
    (server-socket :initform nil)

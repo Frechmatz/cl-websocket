@@ -28,7 +28,7 @@
   (if *server*
       (format t "Echo Server is already running. To stop the server enter echo-server::stop")
       (progn
-	(setf *server* (clws.server:make-websocketserver "localhost" 9001 :threadpool-size 2))
+	(setf *server* (clws.server:make-websocketserver "localhost" 9001))
 	;;(clws.server:register-resource-handler *server* "/echo" 'echo-handler '())
 	(clws.server:register-resource-handler *server* "/" 'echo-handler '())
 	(format t "Starting Echo-Server...~%")
