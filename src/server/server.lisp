@@ -1,11 +1,8 @@
 (in-package :clws.server)
 
 ;;
-;; Ckasses
+;; Classes
 ;;
-
-
-;;(in-package :clws.server.connection)
 
 (defclass websocketserver ()
   ((state :initform :instantiated)
@@ -18,28 +15,153 @@
    (connections-lock :initform (bt:make-lock "websocketserver-connections-lock"))
    (connections :initform nil)))
 
+(defgeneric start (websocketserver) (:documentation  "Start the server"))
+(defgeneric stop (websocketserver) (:documentation "Stop the server"))
+(defgeneric register-resource-handler (websocketserver uri-path class options)
+  (:documentation "Register a resource handler"))
+(defgeneric add-connection (websocketserver connection))
+(defgeneric remove-connection (websocketserver connection))
+(defgeneric register-resource-handler (websocketserver uri-path class options))
+(defgeneric find-resource-handler (websocketserver uri-path))
+
 (defclass server-websocketconnection (clws.connection:websocketconnection)
   ((server :initform nil)
    (connection-http-request :initform nil :documentation "The initial http request")
    (connection-id :initform (gensym))))
 
+(defclass resource-handler ()
+  ((uri-path :initform nil)
+   (class :initform nil)
+   (options :initform nil)))
+
+(defgeneric get-resource-handler-uri-path (resource-handler))
+(defgeneric get-resource-handler-class (resource-handler))
+(defgeneric get-resource-handler-options (resource-handler))
+
+(define-condition resource-already-registered-error (error) ())
+
+;;
+;; Accept handler
+;;
+
+(defun calc-web-socket-accept-header (str)
+  "Calculates the Sec-WebSocket-Accept header
+  str The value of the Sec-WebSocket-Key header field" 
+  (let ((digester (ironclad:make-digest :SHA1)))
+    (ironclad:update-digest
+     digester
+     (ironclad:ascii-string-to-byte-array
+      (concatenate 'string str "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")))
+    (cl-base64:usb8-array-to-base64-string (ironclad:produce-digest digester))))
+
+(defun may-accept-connection (http-request)
+  (and (clws.http:is-get-request http-request)
+       (clws.http:get-header http-request "host")
+       (clws.http:is-header-value http-request "upgrade" "websocket" :ignore-case t)
+       ;; TODO implement according to spec
+       (clws.http:is-header-value http-request "connection" "upgrade" :ignore-case t)
+       (clws.http:get-header http-request "Sec-WebSocket-Key")
+       (clws.http:is-header-value http-request "Sec-WebSocket-Version" "13")))
+
+(defun send-accept-response (http-request stream)
+  (let ((response
+	 (make-instance
+	  'clws.http:http-response
+	  :version "HTTP/1.1"
+	  :status-code "101"
+	  :header (list
+		   (list "upgrade" "websocket")
+		   (list "connection" "upgrade")
+		   (list "sec-websocket-accept"
+			 (calc-web-socket-accept-header
+			  (clws.http:get-header http-request "Sec-WebSocket-Key")))))))
+    (clws.http:serialize-response response stream)
+    (finish-output stream)))
+
+(defun handle-accept (server socket)
+  "Handle a connection request.
+   - reads the HTTP request from the socket
+   - validates the request
+   - looks up a connection handler and instantiates it
+   - sends back an acknowledge message to the client
+   - adds the connection handler instance to the server
+   - starts the connection handler.
+   - closes the socket on any error"
+  (v:trace :clws.server "Processing connection request")
+  (flet ((instantiate-connection (server http-request socket)
+	   "Returns a connection instance or nil if for the given
+           http-request no connection handler matches."
+	   ;; (declare (optimize (debug 3) (speed 0) (space 0)))
+	   (let ((resource-handler
+		  (find-resource-handler
+		   server
+		   (clws.http:get-uri-path http-request))))
+	     (if resource-handler
+		 (let ((c (make-instance
+			   'server-websocketconnection
+			   :server server
+			   :handler (make-instance (get-resource-handler-class resource-handler))
+			   :http-request http-request
+			   :socket socket
+			   :options (get-resource-handler-options resource-handler))))
+		   ;; attach connection to handler
+		   (setf (slot-value
+			  (slot-value c 'clws.connection:connection-handler)
+			  'clws.handler::connection) c)
+		   c))))
+	 (read-request (stream)
+	   "Helper function to read a http request"
+	   (let ((http-request (clws.http:parse-request stream)))
+	     (v:trace
+	      :clws.server
+	      "~%Parsed Http-Request:~%~a~%" (clws.http:pretty-print-http-request http-request))
+	     http-request))
+	 (close-socket (socket)
+	   "Helper function to close a socket"
+	   (v:trace :clws.server "Closing connection request socket")
+	   (handler-case
+	       (usocket:socket-close socket)
+	     (condition (err)
+	       (v:trace :clws.server "Got error on closing socket: ~a" err)))))
+    (handler-case
+	(progn
+	  (let ((s (make-instance 'clws.socket:connection-socket-usocket :socket socket)))
+	    (let ((http-request (read-request (clws.socket:connection-socket-socket-stream s))))
+	      (if (may-accept-connection http-request)
+		  (progn 
+		    (let ((c
+			   (instantiate-connection
+			    server
+			    http-request
+			    s)))
+		      (if c
+			  (handler-case
+			      (progn 
+				(send-accept-response
+				 http-request
+				 (clws.socket:connection-socket-socket-stream s))
+				(add-connection server c)
+				(clws.connection:start-connection c))
+			    (condition (err)
+			      (progn
+				(v:warn :clws.server
+					"Error while sending connect response: ~a" err)
+				(close-socket socket))))
+			  (progn 
+			    (v:debug :clws.server "No handler found.")
+			    (close-socket socket)))))
+		  (progn
+		    (v:debug :clws.server "Not a valid connection request")
+		    (close-socket socket))))))
+      (condition (err)
+	(progn
+	  (v:warn :clws.server
+		  "Error while processing connection request: ~a" err)
+	  (close-socket socket))))))
 
 ;;
 ;; Server
 ;;
-
-
-(defgeneric start (websocketserver)
-  (:documentation
-   "Start the server"))
-
-(defgeneric stop (websocketserver)
-  (:documentation
-   "Stop the server"))
-
-(defgeneric register-resource-handler (websocketserver uri-path class options)
-  (:documentation
-   "Register a resource handler"))
 
 (defmacro do-connection-handlers-by-uri (server uri-path handler &body body)
   (let ((cons (gensym)) (con (gensym)))
@@ -76,7 +198,7 @@
 	     (,http-request (slot-value ,connection 'connection-http-request)))
 	 (let ((,uri (clws.http:get-uri-path ,http-request)))
 	   (let ((,matching-cons
-		  (bt:with-lock-held ((slot-value ,server 'clws.server::connections-lock))
+		  (bt:with-lock-held ((slot-value ,server 'connections-lock))
 		    (remove-if-not
 		     (lambda (cur-con)
 		       (string=
@@ -95,12 +217,9 @@
      (slot-value connection 'connection-http-request)
      param-name)))
 
-
 ;;
 ;; Connection
 ;;
-
-;;(in-package :clws.server.connection)
 
 (defmethod initialize-instance :after ((c server-websocketconnection)
 				       &key (server nil)
@@ -112,56 +231,13 @@
 (defmethod clws.connection:close-connection ((con server-websocketconnection) status-code reason)
   (unwind-protect
        (progn
-	 (v:debug :clws.server.connection "Close server connection")
-	 (funcall #'clws.server::remove-connection (slot-value con 'server) con)
+	 (v:debug :clws.server "Close server connection")
+	 (funcall #'remove-connection (slot-value con 'server) con)
 	 (call-next-method))))
 
-
 ;;
+;; Resource handler
 ;;
-;;
-
-
-
-(defun make-websocketserver (host port)
-  (let ((server (make-instance 'websocketserver)))
-    (setf (slot-value server 'host) host)
-    (setf (slot-value server 'port) port)
-    server))
-
-(defun add-connection (server connection)
-  (assert (typep connection 'server-websocketconnection))
-  (bt:with-lock-held ((slot-value server 'connections-lock))
-    (push connection (slot-value server 'connections))
-    (v:trace :clws.server "add-connection: connection count: ~a" (length (slot-value server 'connections)))))
-
-(defun remove-connection (server connection)
-  (v:trace :clws.server "Remove connection")
-  (if (not (typep connection 'server-websocketconnection))
-      (error "Not a server connection"))
-  (bt:with-lock-held ((slot-value server 'connections-lock))
-    (setf (slot-value server 'connections)
-	  (remove-if
-	   (lambda (item)
-	     (eq (slot-value connection 'connection-id)
-		 (slot-value item 'connection-id)))
-	   (slot-value server 'connections)))
-    (v:trace :clws.server "remove-connection: Remaining connection count: ~a" (length (slot-value server 'connections)))))
-
-;;
-;;
-;;
-
-(define-condition resource-already-registered-error (error) ())
-
-(defclass resource-handler ()
-  ((uri-path :initform nil)
-   (class :initform nil)
-   (options :initform nil)))
-
-(defgeneric get-resource-handler-uri-path (resource-handler))
-(defgeneric get-resource-handler-class (resource-handler))
-(defgeneric get-resource-handler-options (resource-handler))
 
 (defmethod initialize-instance :after
     ((rh resource-handler) &key uri-path class options)
@@ -178,30 +254,58 @@
 (defmethod get-resource-handler-options ((rh resource-handler))
   (slot-value rh 'options))
 
+
+;;
+;; Server
+;;
+
+(defun make-websocketserver (host port)
+  (let ((server (make-instance 'websocketserver)))
+    (setf (slot-value server 'host) host)
+    (setf (slot-value server 'port) port)
+    server))
+
 (defmethod register-resource-handler ((server websocketserver) uri-path class options)
   (bt:with-recursive-lock-held ((slot-value server 'resource-handlers-lock))
     (if (find-resource-handler server uri-path)
       (error (make-condition
-	      'clws.server:resource-already-registered-error
+	      'resource-already-registered-error
 	      :format-control "Resource handler already registered: ~a"
 	      :format-arguments (list uri-path))))
     (push (make-instance 'resource-handler :uri-path uri-path :class class :options options)
 	  (slot-value server 'resource-handlers))))
 
-(defun find-resource-handler (server uri-path)
+(defmethod find-resource-handler ((server websocketserver) uri-path)
   (bt:with-recursive-lock-held ((slot-value server 'resource-handlers-lock))
     (find-if (lambda (i) (string= (get-resource-handler-uri-path i) uri-path))
 	     (slot-value server 'resource-handlers))))
   
+(defmethod add-connection ((server websocketserver) connection)
+  (assert (typep connection 'server-websocketconnection))
+  (bt:with-lock-held ((slot-value server 'connections-lock))
+    (push connection (slot-value server 'connections))
+    (v:trace :clws.server
+	     "add-connection: connection count: ~a" (length (slot-value server 'connections)))))
 
-;;
-;;
-;;
+(defmethod remove-connection ((server websocketserver) connection)
+  (v:trace :clws.server "Remove connection")
+  (if (not (typep connection 'server-websocketconnection))
+      (error "Not a server connection"))
+  (bt:with-lock-held ((slot-value server 'connections-lock))
+    (setf (slot-value server 'connections)
+	  (remove-if
+	   (lambda (item)
+	     (eq (slot-value connection 'connection-id)
+		 (slot-value item 'connection-id)))
+	   (slot-value server 'connections)))
+    (v:trace :clws.server
+	     "remove-connection: Remaining connection count: ~a"
+	     (length (slot-value server 'connections)))))
 
 (defmethod clws.server:start ((server websocketserver))
   (v:info :clws.server "Starting WebsocketServer")
   (bt:with-lock-held ((slot-value server 'state-lock))
-    ;; todo: check, if already running or stopped
+    ;; TODO check, if already running or stopped
     (setf (slot-value server 'state) :running)
     (setf (slot-value server 'server-socket)
 	  (usocket:socket-listen
@@ -225,18 +329,7 @@
 			  (usocket:socket-close socket)
 			  (return))
 			(progn 
-			  ;; (cl-threadpool:add-job
-			  ;; (slot-value server 'threadpool)
-			  ;; (clws.server.request-processor:get-processor server socket))
-			  (let ((worker
-				 (clws.server.request-processor:get-processor server socket)))
-			    ;; Create a thread as preliminary workaround in order to get
-			    ;; rid of cl-threadpool dependency
-			    ;; TODO Implement accept-handler as synchronous function
-			    (bt:make-thread worker :name "Accept-Handler-Thread"))
-			    
-
-			  ))))
+			  (handle-accept server socket)))))
 	      (condition (err)
 		(progn
 		  (if socket
@@ -250,7 +343,7 @@
 
 (defmethod clws.server:stop ((server websocketserver))
   (bt:with-lock-held ((slot-value server 'state-lock))
-    ;; todo: check, if already stopping or stopped
+    ;; TODO check, if already stopping or stopped
     (setf (slot-value server 'state) :stopping)
     (v:info :clws.server "Stopping WebsocketServer...")
     (v:info :clws.server "Closing connections...")

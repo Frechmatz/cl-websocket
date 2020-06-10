@@ -34,7 +34,4 @@
 	       (:module "src/server"
 			:serial t
 			:components ((:file "packages")
-;;				     (:file "server-class")
-;;				     (:file "server-connection")
-				     (:file "connection-request-processor")
 				     (:file "server")))))
