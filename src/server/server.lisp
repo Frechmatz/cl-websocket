@@ -1,5 +1,128 @@
 (in-package :clws.server)
 
+;;
+;; Ckasses
+;;
+
+
+;;(in-package :clws.server.connection)
+
+(defclass websocketserver ()
+  ((state :initform :instantiated)
+   (state-lock :initform (bt:make-lock "websocketserver-state-lock"))
+   (host :initform nil)
+   (port :initform nil)
+   (server-socket :initform nil)
+   (resource-handlers-lock :initform (bt:make-recursive-lock "resource-handlers-lock"))
+   (resource-handlers :initform nil)
+   (connections-lock :initform (bt:make-lock "websocketserver-connections-lock"))
+   (connections :initform nil)))
+
+(defclass server-websocketconnection (clws.connection:websocketconnection)
+  ((server :initform nil)
+   (connection-http-request :initform nil :documentation "The initial http request")
+   (connection-id :initform (gensym))))
+
+
+;;
+;; Server
+;;
+
+
+(defgeneric start (websocketserver)
+  (:documentation
+   "Start the server"))
+
+(defgeneric stop (websocketserver)
+  (:documentation
+   "Stop the server"))
+
+(defgeneric register-resource-handler (websocketserver uri-path class options)
+  (:documentation
+   "Register a resource handler"))
+
+(defmacro do-connection-handlers-by-uri (server uri-path handler &body body)
+  (let ((cons (gensym)) (con (gensym)))
+    `(let ((,cons (bt:with-lock-held ((slot-value ,server 'connections-lock))
+		    (remove-if-not
+		     (lambda (cur-con)
+		       (string=
+			,uri-path
+			(clws.http:get-uri-path
+			 (slot-value cur-con 'connection-http-request))))
+		     (slot-value ,server 'connections)))))
+	 (dolist (,con ,cons)
+	   (let ((,handler (slot-value ,con 'clws.connection::connection-handler)))
+	     ,@body)))))
+
+(defmacro do-connection-handlers (server handler &body body)
+  (let ((cons (gensym)) (con (gensym)))
+    `(let ((,cons (bt:with-lock-held ((slot-value ,server 'connections-lock))
+		    (copy-list (slot-value ,server 'connections)))))
+	 (dolist (,con ,cons)
+	   (let ((,handler (slot-value ,con 'clws.connection::connection-handler)))
+	     ,@body)))))
+
+(defmacro do-connection-handlers-by-handler (connection-handler handler &body body)
+  (let ((matching-cons (gensym))
+	(connection (gensym))
+	(uri (gensym))
+	(server (gensym))
+	(con-iter (gensym))
+	(http-request (gensym)))
+    `(let ((,connection (slot-value ,connection-handler 'clws.handler::connection)))
+       (assert (typep ,connection 'server-websocketconnection))
+       (let ((,server (slot-value ,connection 'server))
+	     (,http-request (slot-value ,connection 'connection-http-request)))
+	 (let ((,uri (clws.http:get-uri-path ,http-request)))
+	   (let ((,matching-cons
+		  (bt:with-lock-held ((slot-value ,server 'clws.server::connections-lock))
+		    (remove-if-not
+		     (lambda (cur-con)
+		       (string=
+			  ,uri
+			  (clws.http:get-uri-path
+			   (slot-value cur-con 'connection-http-request))))
+		       (slot-value ,server 'connections)))))
+	     (dolist (,con-iter ,matching-cons)
+	       (let ((,handler (slot-value ,con-iter 'clws.connection::connection-handler)))
+		 ,@body))))))))
+
+(defun get-uri-query-param (connection-handler param-name)
+  (let ((connection (slot-value connection-handler 'clws.handler::connection)))
+    (assert (typep connection 'server-websocketconnection))
+    (clws.http:get-uri-query-param
+     (slot-value connection 'connection-http-request)
+     param-name)))
+
+
+;;
+;; Connection
+;;
+
+;;(in-package :clws.server.connection)
+
+(defmethod initialize-instance :after ((c server-websocketconnection)
+				       &key (server nil)
+					 http-request
+					 &allow-other-keys)
+  (setf (slot-value c 'connection-http-request) http-request)
+  (setf (slot-value c 'server) server))
+	   
+(defmethod clws.connection:close-connection ((con server-websocketconnection) status-code reason)
+  (unwind-protect
+       (progn
+	 (v:debug :clws.server.connection "Close server connection")
+	 (funcall #'clws.server::remove-connection (slot-value con 'server) con)
+	 (call-next-method))))
+
+
+;;
+;;
+;;
+
+
+
 (defun make-websocketserver (host port)
   (let ((server (make-instance 'websocketserver)))
     (setf (slot-value server 'host) host)
@@ -7,21 +130,21 @@
     server))
 
 (defun add-connection (server connection)
-  (assert (typep connection 'clws.server.connection::server-websocketconnection))
+  (assert (typep connection 'server-websocketconnection))
   (bt:with-lock-held ((slot-value server 'connections-lock))
     (push connection (slot-value server 'connections))
     (v:trace :clws.server "add-connection: connection count: ~a" (length (slot-value server 'connections)))))
 
 (defun remove-connection (server connection)
   (v:trace :clws.server "Remove connection")
-  (if (not (typep connection 'clws.server.connection:server-websocketconnection))
+  (if (not (typep connection 'server-websocketconnection))
       (error "Not a server connection"))
   (bt:with-lock-held ((slot-value server 'connections-lock))
     (setf (slot-value server 'connections)
 	  (remove-if
 	   (lambda (item)
-	     (eq (slot-value connection 'clws.server.connection::connection-id)
-		 (slot-value item 'clws.server.connection::connection-id)))
+	     (eq (slot-value connection 'connection-id)
+		 (slot-value item 'connection-id)))
 	   (slot-value server 'connections)))
     (v:trace :clws.server "remove-connection: Remaining connection count: ~a" (length (slot-value server 'connections)))))
 
@@ -97,7 +220,8 @@
 		  (bt:with-lock-held ((slot-value server 'state-lock))
 		    (if (not (eq :running (slot-value server 'state)))
 			(progn
-			  (v:info :clws.server "Received connect request while stopping server. Closing socket.")
+			  (v:info :clws.server
+				  "Received connect request while stopping server. Closing socket.")
 			  (usocket:socket-close socket)
 			  (return))
 			(progn 
@@ -137,7 +261,7 @@
       (dolist (c con-buf)
 	(v:info :clws.server
 		"Closing connection ~a"
-		(slot-value c 'clws.server.connection::connection-id))
+		(slot-value c 'connection-id))
 	(clws.connection:close-connection
 	 c
 	 clws.frame:+STATUS-CODE-GOING-AWAY+

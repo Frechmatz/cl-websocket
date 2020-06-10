@@ -12,7 +12,7 @@
 		 (let ((handlers '()))
 		   (with-test-connection
 		       (:server server
-				:connection-class clws.server.connection::server-websocketconnection
+				:connection-class clws.server:server-websocketconnection
 				:start-connection nil
 				:http-request (make-test-http-request "/test"))
 		       'silent-handler socket con h
@@ -21,12 +21,12 @@
 		     (push h handlers))
 		   (with-test-connection
 		       (:server server
-				:connection-class clws.server.connection::server-websocketconnection
+				:connection-class clws.server:server-websocketconnection
 				:start-connection nil
 				:http-request (make-test-http-request "/test"))
 		       'silent-handler socket con h
 		     (assert-true h)
-		     (assert-true (typep con 'clws.server.connection::server-websocketconnection))
+		     (assert-true (typep con 'clws.server:server-websocketconnection))
 		     (clws.server::add-connection server con)
 		     (push h handlers))
 		   (expect-server-handlers-by-uri server "/test" handlers)
@@ -47,7 +47,7 @@
 		 (let ((handlers '()) (all-handlers '()))
 		   (with-test-connection
 		       (:server server
-				:connection-class clws.server.connection::server-websocketconnection
+				:connection-class clws.server:server-websocketconnection
 				:start-connection nil
 				:http-request (make-test-http-request "/test"))
 		       'silent-handler socket con h
@@ -57,7 +57,7 @@
 		     (push h all-handlers))
 		   (with-test-connection
 		       (:server server
-				:connection-class clws.server.connection::server-websocketconnection
+				:connection-class clws.server:server-websocketconnection
 				:start-connection nil
 				:http-request (make-test-http-request "/test2"))
 		       'silent-handler socket con h
@@ -66,12 +66,12 @@
 		     (push h all-handlers))
 		   (with-test-connection
 		       (:server server
-				:connection-class clws.server.connection::server-websocketconnection
+				:connection-class clws.server:server-websocketconnection
 				:start-connection nil
 				:http-request (make-test-http-request "/test"))
 		       'silent-handler socket con h
 		     (assert-true h)
-		     (assert-true (typep con 'clws.server.connection::server-websocketconnection))
+		     (assert-true (typep con 'clws.server:server-websocketconnection))
 		     (clws.server::add-connection server con)
 		     (push h handlers)
 		     (push h all-handlers))
@@ -91,7 +91,7 @@
 		 (let ((handlers '()) (connection-handler nil))
 		   (with-test-connection
 		       (:server server
-				:connection-class clws.server.connection::server-websocketconnection
+				:connection-class clws.server:server-websocketconnection
 				:start-connection nil
 				:http-request (make-test-http-request "/test"))
 		       'silent-handler socket con h
@@ -101,12 +101,12 @@
 		     (push h handlers))
 		   (with-test-connection
 		       (:server server
-				:connection-class clws.server.connection::server-websocketconnection
+				:connection-class clws.server:server-websocketconnection
 				:start-connection nil
 				:http-request (make-test-http-request "/test"))
 		       'silent-handler socket con h
 		     (assert-true h)
-		     (assert-true (typep con 'clws.server.connection::server-websocketconnection))
+		     (assert-true (typep con 'clws.server:server-websocketconnection))
 		     (clws.server::add-connection server con)
 		     (push h handlers))
 		   (expect-server-handlers-by-handler connection-handler handlers)
@@ -125,7 +125,7 @@
 		 (let ((handlers '()) (connection-handler nil))
 		   (with-test-connection
 		       (:server server
-				:connection-class clws.server.connection::server-websocketconnection
+				:connection-class clws.server:server-websocketconnection
 				:start-connection nil
 				:http-request (make-test-http-request "/test"))
 		       'silent-handler socket con h
@@ -135,7 +135,7 @@
 		     (push h handlers))
 		   (with-test-connection
 		       (:server server
-				:connection-class clws.server.connection::server-websocketconnection
+				:connection-class clws.server:server-websocketconnection
 				:start-connection nil
 				:http-request (make-test-http-request "/test2"))
 		       'silent-handler socket con h
@@ -143,7 +143,7 @@
 		     (clws.server::add-connection server con))
 		   (with-test-connection
 		       (:server server
-				:connection-class clws.server.connection::server-websocketconnection
+				:connection-class clws.server:server-websocketconnection
 				:start-connection nil
 				:http-request (make-test-http-request "/test"))
 		       'silent-handler socket con h

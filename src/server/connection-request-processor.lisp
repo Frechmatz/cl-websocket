@@ -44,7 +44,7 @@
 	  (clws.http:get-uri-path http-request))))
     (if resource-handler
 	(let ((c (make-instance
-		  'clws.server.connection:server-websocketconnection
+		  'clws.server:server-websocketconnection
 		  :server server
 		  :handler (make-instance (clws.server::get-resource-handler-class resource-handler))
 		  :http-request http-request

@@ -9,13 +9,14 @@
   (:export :do-connection-handlers-by-uri)
   (:export :do-connection-handlers-by-handler)
   (:export :do-connection-handlers)
-  (:export :get-uri-query-param))
+  (:export :get-uri-query-param)
+  (:export :server-websocketconnection))
 
 (defpackage :clws.server.request-processor
   (:use :cl)
   (:export :get-processor))
 
-(defpackage :clws.server.connection
-  (:use :cl)
-  (:export :server-websocketconnection))
+;;(defpackage :clws.server.connection
+;;  (:use :cl)
+;;  (:export :server-websocketconnection))
 
