@@ -120,26 +120,25 @@
 	   "Helper function to close a socket"
 	   (v:trace :clws.server "Closing connection request socket")
 	   (handler-case
-	       (usocket:socket-close socket)
+	       (clws.socket:socket-close socket)
 	     (condition (err)
 	       (v:trace :clws.server "Got error on closing socket: ~a" err)))))
     (handler-case
 	(progn
-	  (let ((s (make-instance 'clws.socket:connection-socket-usocket :socket socket)))
-	    (let ((http-request (read-request (clws.socket:connection-socket-socket-stream s))))
+	    (let ((http-request (read-request (clws.socket:socket-stream socket))))
 	      (if (may-accept-connection http-request)
 		  (progn 
 		    (let ((c
 			   (instantiate-connection
 			    server
 			    http-request
-			    s)))
+			    socket)))
 		      (if c
 			  (handler-case
 			      (progn 
 				(send-accept-response
 				 http-request
-				 (clws.socket:connection-socket-socket-stream s))
+				 (clws.socket:socket-stream socket))
 				(add-connection server c)
 				(clws.connection:start-connection c))
 			    (condition (err)
@@ -152,7 +151,7 @@
 			    (close-socket socket)))))
 		  (progn
 		    (v:debug :clws.server "Not a valid connection request")
-		    (close-socket socket))))))
+		    (close-socket socket)))))
       (condition (err)
 	(progn
 	  (v:warn :clws.server
@@ -308,10 +307,9 @@
     ;; TODO check, if already running or stopped
     (setf (slot-value server 'state) :running)
     (setf (slot-value server 'server-socket)
-	  (usocket:socket-listen
+	  (clws.socket:socket-listen
 	   (slot-value server 'host)
-	   (slot-value server 'port)
-	   :element-type '(unsigned-byte 8)))
+	   (slot-value server 'port)))
     (bt:make-thread
      (lambda ()
        (v:info :clws.server "Socket-Accept listener thread has started")
@@ -319,21 +317,21 @@
 	  (let ((socket nil))
 	    (handler-case
 		(progn
-		  (setf socket (usocket:socket-accept (slot-value server 'server-socket)))
+		  (setf socket (clws.socket:socket-accept (slot-value server 'server-socket)))
 		  (v:trace :clws.server "Received connect request")
 		  (bt:with-lock-held ((slot-value server 'state-lock))
 		    (if (not (eq :running (slot-value server 'state)))
 			(progn
 			  (v:info :clws.server
 				  "Received connect request while stopping server. Closing socket.")
-			  (usocket:socket-close socket)
+			  (clws.socket:socket-close socket)
 			  (return))
 			(progn 
 			  (handle-accept server socket)))))
 	      (condition (err)
 		(progn
 		  (if socket
-		      (usocket:socket-close socket))
+		      (clws.socket:socket-close socket))
 		  (v:warn :clws.server "Received signal from server-socket: ~S" err)
 		  (return)
 		  )))))
@@ -360,7 +358,7 @@
 	 clws.frame:+STATUS-CODE-GOING-AWAY+
 	 "Server is shutting down")))
     (v:info :clws.server "Closing server socket")
-    (usocket:socket-close (slot-value server 'server-socket))
+    (clws.socket:socket-close (slot-value server 'server-socket))
     (setf (slot-value server 'state) :stopped)
     (assert (eq 0 (length (slot-value server 'connections)))))
   (v:info :clws.server "WebsocketServer stopped"))

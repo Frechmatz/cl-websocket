@@ -22,12 +22,18 @@
 				     (:file "header-parser")
 				     (:file "request-parser")
 				     (:file "response-serializer")))
+	       (:module "src/socket"
+			:serial t
+			:components ((:file "packages")
+				     (:file "socket-impl-wrapper")
+				     (:file "socket")
+				     (:file "usocket")))
 	       (:module "src/connection"
 			:serial t
 			:components ((:file "packages")
 				     (:file "binary-types")
 				     (:file "frame")
-				     (:file "connection-socket")
+				     ;;(:file "connection-socket")
 				     (:file "connection")
 				     (:file "connection-handler")
 				     ))

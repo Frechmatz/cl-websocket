@@ -54,7 +54,7 @@
 
 (defun connection-send-message (connection opcode payload)
   (bt:with-lock-held ((slot-value connection 'sending-data-lock))
-    (let ((io-stream (clws.socket:connection-socket-socket-stream (slot-value connection 'connection-socket))))
+    (let ((io-stream (clws.socket:socket-stream (slot-value connection 'connection-socket))))
       (clws.frame:write-frame io-stream :opcode opcode :buf payload)
       (force-output io-stream))))
   
@@ -94,7 +94,7 @@
 	  ;; close socket
 	  (v:trace :clws.connection "Closing connection socket")
 	  (handler-case
-	      (clws.socket:connection-socket-close (slot-value con 'connection-socket))
+	      (clws.socket:socket-close (slot-value con 'connection-socket))
 	    (condition (err)
 	      (v:warn :clws.connection
 		       "Got error on closing socket of connection: ~a"
@@ -193,7 +193,7 @@
   (handler-case
       (let ((frame
 	     (clws.frame:read-frame
-	      (clws.socket:connection-socket-socket-stream (slot-value connection 'connection-socket))
+	      (clws.socket:socket-stream (slot-value connection 'connection-socket))
 	      (lambda (frame) (may-accept-frame connection frame)))))
 	(cond
 	  ((clws.frame:close-frame-p frame)

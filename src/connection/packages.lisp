@@ -68,11 +68,11 @@
   (:export :send-text-message)
   (:export :send-binary-message))
  
-(defpackage :clws.socket
-  (:use :cl)
-  (:export :connection-socket)
-  (:export :connection-socket-usocket)
-  (:export :connection-socket-close)
-  (:export :connection-socket-socket-stream))
+;;(defpackage :clws.socket
+;;  (:use :cl)
+;;  (:export :connection-socket)
+;;  (:export :connection-socket-usocket)
+;;  (:export :connection-socket-close)
+;;  (:export :connection-socket-socket-stream))
 
 
