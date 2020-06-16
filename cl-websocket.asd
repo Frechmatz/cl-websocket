@@ -25,15 +25,14 @@
 	       (:module "src/socket"
 			:serial t
 			:components ((:file "packages")
-				     (:file "socket-impl-wrapper")
-				     (:file "socket")
-				     (:file "usocket")))
+				     (:file "socket-implementation")
+				     (:file "socket-implementation-usocket")
+				     (:file "socket")))
 	       (:module "src/connection"
 			:serial t
 			:components ((:file "packages")
 				     (:file "binary-types")
 				     (:file "frame")
-				     ;;(:file "connection-socket")
 				     (:file "connection")
 				     (:file "connection-handler")
 				     ))

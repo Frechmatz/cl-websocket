@@ -1,5 +1,10 @@
 (in-package :clws.socket)
 
+;;
+;;
+;;
+
+(defparameter *socket-implementation* nil)
 
 ;;
 ;; Socket layer of cl-websocket
@@ -30,23 +35,32 @@
   (if (slot-value socket 'flexi-stream)
       (finish-output (slot-value socket 'flexi-stream)))
   (force-output (slot-value socket 'native-stream))
-  (clws.socket.socket-impl-wrapper:socket-close (slot-value socket 'native-socket)))
+  (clws.socket.implementation:socket-close
+   *socket-implementation*
+   (slot-value socket 'native-socket)))
 
 (defun socket-listen (host port)
   "Open host/port. Returns a socket"
-  (let ((s (clws.socket.socket-impl-wrapper:socket-listen host port)))
+  (let ((s (clws.socket.implementation:socket-listen
+	    *socket-implementation*
+	    host
+	    port)))
     (make-instance 'socket :native-socket s)))
 
 (defun socket-accept (socket)
   "Blocking function that waits for connection requests. Returns a socket representing a connection."
   (assert-is-socket socket)
-  (let ((s (clws.socket.socket-impl-wrapper:socket-accept (slot-value socket 'native-socket))))
+  (let ((s (clws.socket.implementation:socket-accept
+	    *socket-implementation*
+	    (slot-value socket 'native-socket))))
     (make-instance 'socket :native-socket s)))
 
 (defmethod initialize-instance :after ((s socket) &key native-socket)
   (setf (slot-value s 'native-socket) s)
   (setf (slot-value s 'native-stream)
-	(clws.socket.socket-impl-wrapper:socket-stream native-socket))
+	(clws.socket.implementation:socket-stream
+	 *socket-implementation*
+	 native-socket))
   (setf (slot-value s 'stream)
 	(flexi-streams:make-flexi-stream
 	 (slot-value s 'native-stream)
