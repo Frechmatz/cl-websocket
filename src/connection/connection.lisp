@@ -1,6 +1,6 @@
 (in-package :clws.connection)
 
-(define-condition policy-violation-error (error) ())
+(define-condition policy-violation-error (simple-error) ())
 
 (defclass websocketconnection ()
   ((connection-handler :initform nil)
