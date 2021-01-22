@@ -37,8 +37,8 @@
    (payload :initform nil :documentation
 	    "nil or the un-masked payload of the frame")))
 
-(define-condition protocol-error (error) ())
-(define-condition inconsistent-data-error (error) ())
+(define-condition protocol-error (simple-error) ())
+(define-condition inconsistent-data-error (simple-error) ())
 
 (defun fin-frame-p (frame)
   (slot-value frame 'fin))
