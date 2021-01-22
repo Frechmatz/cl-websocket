@@ -2,7 +2,7 @@
 
 
 (defun throw-parse-error ()
-  (error 'parse-error :text (format nil "Parse error")))
+  (error 'parse-error))
 
 
 ;; todo: create a macro
