@@ -38,7 +38,7 @@
 (defgeneric get-resource-handler-class (resource-handler))
 (defgeneric get-resource-handler-options (resource-handler))
 
-(define-condition resource-already-registered-error (error) ())
+(define-condition resource-already-registered-error (simple-error) ())
 
 ;;
 ;; Accept handler
